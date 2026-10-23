@@ -24,7 +24,13 @@ def get_state_db_path():
         app_data = os.environ.get("APPDATA") or os.path.join(HOME_DIR, "AppData/Roaming")
         return os.path.join(app_data, "Antigravity IDE/User/globalStorage/state.vscdb")
     else: # Linux / FreeBSD
-        return os.path.join(HOME_DIR, ".config/Antigravity IDE/User/globalStorage/state.vscdb")
+        p1 = os.path.join(HOME_DIR, ".config/Antigravity IDE/User/globalStorage/state.vscdb")
+        if os.path.exists(p1):
+            return p1
+        p2 = os.path.join(HOME_DIR, ".config/Antigravity/User/globalStorage/state.vscdb")
+        if os.path.exists(p2):
+            return p2
+        return p1
 
 STATE_DB_PATH = get_state_db_path()
 CONVERSATIONS_DIR = os.path.join(HOME_DIR, ".gemini/antigravity-ide/conversations")
@@ -409,6 +415,8 @@ def check_status():
         "/opt/antigravity-ide/resources/app/out/main.js",
         "/usr/lib/antigravity-ide/resources/app/out/main.js",
         "/usr/share/antigravity-ide/resources/app/out/main.js",
+        "/usr/share/antigravity/resources/app/out/main.js",
+        "/usr/lib/antigravity/resources/app/out/main.js",
         "/Applications/Antigravity IDE.app/Contents/Resources/app/out/main.js",
         os.path.expanduser("~/Applications/Antigravity IDE.app/Contents/Resources/app/out/main.js"),
         os.path.expandvars(r"%LOCALAPPDATA%\Programs\Antigravity IDE\resources\app\out\main.js"),

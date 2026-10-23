@@ -80,7 +80,7 @@ $LocalPy = Join-Path $PSScriptRoot "antigravity_recover.py"
 if (Test-Path $LocalPy) {
     Copy-Item $LocalPy $DestPy -Force
 } else {
-    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/sevencommonfactor/antigravity-conversation-recovery/main/antigravity_recover.py" -OutFile $DestPy
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/N-Teddy/antigravity-conversation-recovery/main/antigravity_recover.py" -OutFile $DestPy
 }
 Write-Host "[+] Installed recovery engine: $DestPy" -ForegroundColor Green
 

@@ -14,12 +14,12 @@ Run the single command below for your operating system:
 
 ### 🐧 Linux & 🍎 macOS (Terminal)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sevencommonfactor/antigravity-conversation-recovery/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/N-Teddy/antigravity-conversation-recovery/main/install.sh | bash
 ```
 
 ### 🪟 Windows (PowerShell)
 ```powershell
-irm https://raw.githubusercontent.com/sevencommonfactor/antigravity-conversation-recovery/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/N-Teddy/antigravity-conversation-recovery/main/install.ps1 | iex
 ```
 
 > **What the installer does automatically:**

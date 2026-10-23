@@ -25,6 +25,8 @@ CANDIDATES=(
   "/opt/antigravity-ide/resources/app/out/main.js"
   "/usr/lib/antigravity-ide/resources/app/out/main.js"
   "/usr/share/antigravity-ide/resources/app/out/main.js"
+  "/usr/share/antigravity/resources/app/out/main.js"
+  "/usr/lib/antigravity/resources/app/out/main.js"
   "/Applications/Antigravity IDE.app/Contents/Resources/app/out/main.js"
   "$HOME_DIR/Applications/Antigravity IDE.app/Contents/Resources/app/out/main.js"
 )
@@ -42,6 +44,7 @@ if [ -z "$APP_MAIN_JS" ]; then
 else
   echo "[+] Found Antigravity IDE at: $APP_MAIN_JS"
   echo "[*] Verifying/applying core engine patch..."
+  export APP_MAIN_JS
 
   python3 - << 'PYEOF'
 import re, shutil, os
@@ -52,6 +55,8 @@ if not main_js_path:
         "/opt/antigravity-ide/resources/app/out/main.js",
         "/usr/lib/antigravity-ide/resources/app/out/main.js",
         "/usr/share/antigravity-ide/resources/app/out/main.js",
+        "/usr/share/antigravity/resources/app/out/main.js",
+        "/usr/lib/antigravity/resources/app/out/main.js",
         "/Applications/Antigravity IDE.app/Contents/Resources/app/out/main.js",
         os.path.expanduser("~/Applications/Antigravity IDE.app/Contents/Resources/app/out/main.js")
     ]:
@@ -116,7 +121,7 @@ if [ -f "$SCRIPT_DIR/antigravity_recover.py" ]; then
   cp -f "$SCRIPT_DIR/antigravity_recover.py" "$INSTALL_DIR/antigravity_recover.py"
 else
   # If piped from curl, download or fetch
-  curl -fsSL "https://raw.githubusercontent.com/sevencommonfactor/antigravity-conversation-recovery/main/antigravity_recover.py" -o "$INSTALL_DIR/antigravity_recover.py" 2>/dev/null || true
+  curl -fsSL "https://raw.githubusercontent.com/N-Teddy/antigravity-conversation-recovery/main/antigravity_recover.py" -o "$INSTALL_DIR/antigravity_recover.py" 2>/dev/null || true
 fi
 chmod +x "$INSTALL_DIR/antigravity_recover.py"
 echo "[+] Installed recovery engine: $INSTALL_DIR/antigravity_recover.py"
