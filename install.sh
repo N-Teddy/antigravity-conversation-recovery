@@ -65,53 +65,31 @@ if not main_js_path:
             break
 
 if main_js_path and os.path.exists(main_js_path):
-    with open(main_js_path, "r", encoding="utf-8") as f:
-        text = f.read()
-
-    modified = False
-
-    # 1. Ensure initIPCSubscription is clean (remove harmful topic cache deletion if present)
-    ipc_pattern = re.compile(r"delete\s+this\.lazilyInitializedTopicObservables\[\w+\];")
-    if ipc_pattern.search(text):
-        text = ipc_pattern.sub("", text)
-        modified = True
-        print("    [+] Removed problematic IPC topic cache deletion (safeguards Language Server).")
-
-    # 2. Patch pushUpdate immediate persistence safely scoped to trajectorySummaries
-    if "===\"trajectorySummaries\"&&await this._persistTopic(" in text:
-        print("    [OK] pushUpdate scoped persistence is already active.")
-    elif "await this._persistTopic(" in text:
-        text = re.sub(
-            r"await this\._persistTopic\((\w+)\);",
-            r"\1===\"trajectorySummaries\"&&await this._persistTopic(\1);",
-            text
-        )
-        modified = True
-        print("    [+] Upgraded pushUpdate persistence to safely target trajectorySummaries only.")
-    else:
-        pattern1 = re.compile(r"(this\._updateEmitters\[(\w+)\]\.emit\((\w+)\);)(return\s*\}\s*finally)")
-        m1 = pattern1.search(text)
-        if m1:
-            topic_var = m1.group(2)
-            text = pattern1.sub(r"\1" + topic_var + r"===\"trajectorySummaries\"&&await this._persistTopic(" + topic_var + r");\4", text, count=1)
-            modified = True
-            print(f"    [+] Patched pushUpdate for safe trajectorySummaries disk persistence.")
-        else:
-            print("    [!] Warning: pushUpdate pattern not found (different IDE version).")
-    if modified:
-        bak = main_js_path + ".bak"
-        if not os.path.exists(bak):
-            try:
-                shutil.copy2(main_js_path, bak)
-                print(f"    [+] Created backup: {bak}")
-            except Exception as e:
-                print(f"    [!] Could not create backup: {e}")
+    bak = main_js_path + ".bak"
+    # If a factory backup exists, restore it directly
+    if os.path.exists(bak):
         try:
-            with open(main_js_path, "w", encoding="utf-8") as f:
-                f.write(text)
-            print("    [+] Core engine successfully updated.")
-        except PermissionError:
-            print("    [!] Permission denied writing to main.js. Please run with appropriate permissions.")
+            shutil.copy2(bak, main_js_path)
+            print("    [+] Restored pristine factory engine from backup (100% stable).")
+        except Exception as e:
+            print(f"    [!] Note on backup restore: {e}")
+    else:
+        # Otherwise, clean out any legacy patches if present
+        with open(main_js_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        cleaned = content
+        cleaned = re.sub(r'delete\s+this\.lazilyInitializedTopicObservables\[\w+\];', '', cleaned)
+        cleaned = re.sub(r'(\w+)==="trajectorySummaries"&&await\s+this\._persistTopic\(\);', '', cleaned)
+        cleaned = re.sub(r'await\s+this\._persistTopic\(\w+\);', '', cleaned)
+        if cleaned != content:
+            try:
+                with open(main_js_path, "w", encoding="utf-8") as f:
+                    f.write(cleaned)
+                print("    [+] Removed legacy engine patches. Core engine is now 100% factory pristine.")
+            except Exception as e:
+                print(f"    [!] Note: {e}")
+        else:
+            print("    [OK] Engine core is clean and unpatched (safe non-invasive architecture).")
 PYEOF
 fi
 

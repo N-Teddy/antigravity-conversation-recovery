@@ -57,9 +57,9 @@ flowchart TD
     E -.->|100ms Debounce| G[Persistent Storage Safe from Outages]
 ```
 
-1. **Scoped Persistence Engine:** Safely patches `pushUpdate()` in `main.js` to persist `trajectorySummaries` directly without interfering with any other IDE subsystems or background communication.
-2. **Clean IPC Isolation:** Preserves in-memory state for ephemeral subsystems (such as Language Server discovery endpoints and authentication tokens), eliminating race conditions and infinite loading loops.
-3. **Workspace Isolation Engine:** Reconstructs the exact Protobuf schema (`Field 9: CortexWorkspaceMetadata`) so conversations are strictly bound to their respective projects.
+1. **Non-Invasive Architecture:** Leaves Antigravity IDE's internal binary and Electron core (`main.js`) 100% factory pristine. This completely avoids IPC lock contention, multi-window race conditions, and Language Server disconnections.
+2. **Direct SQLite Recovery Engine:** Parses conversation databases (`~/.gemini/antigravity-ide/conversations/*.db`) directly from disk and rebuilds `state.vscdb` with strict workspace isolation.
+3. **Automated Background Protection:** Automatically checks and restores any un-indexed conversations in the background (via systemd user timer on Linux, launchd on macOS, or Task Scheduler on Windows).
 
 ---
 
@@ -107,8 +107,8 @@ Detected OS: Linux
 User Home: /home/user
 State Database: Found
 Engine Core (/opt/antigravity-ide/resources/app/out/main.js):
-  - Safe disk persistence patch:     ACTIVE [OK]
-  - IPC topic isolation:             CLEAN [OK]
+  - Engine Integrity:                PRISTINE FACTORY [OK] (zero-risk architecture)
+  - IPC Topic Isolation:             CLEAN [OK]
 Conversation Databases on disk: 101
 Indexed in state.vscdb:         100
 Background Recovery Timer:       ACTIVE [OK]

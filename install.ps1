@@ -33,43 +33,24 @@ foreach ($path in $Candidates) {
 
 if ($MainJsPath) {
     Write-Host "[+] Located Antigravity IDE at: $MainJsPath" -ForegroundColor Green
-    Write-Host "[*] Checking core engine patch..." -ForegroundColor Yellow
+    Write-Host "[*] Verifying core engine integrity..." -ForegroundColor Yellow
 
-    $content = [System.IO.File]::ReadAllText($MainJsPath)
-    $modified = $false
-    # 1. Ensure initIPCSubscription is clean (remove harmful topic cache deletion if present)
-    $ipcPattern = [regex]"delete\s+this\.lazilyInitializedTopicObservables\[\w+\];"
-    if ($ipcPattern.IsMatch($content)) {
-        $content = $ipcPattern.Replace($content, "")
-        $modified = $true
-        Write-Host "    [+] Removed problematic IPC topic cache deletion (safeguards Language Server)." -ForegroundColor Green
-    }
-
-    # 2. Patch pushUpdate immediate persistence safely scoped to trajectorySummaries
-    if ($content.Contains("===\"trajectorySummaries\"&&await this._persistTopic(")) {
-        Write-Host "    [OK] pushUpdate scoped persistence already active." -ForegroundColor Green
-    } elseif ($content.Contains("await this._persistTopic(")) {
-        $scopedRegex = [regex]"await this\._persistTopic\((\w+)\);"
-        $content = $scopedRegex.Replace($content, "`$1===\"trajectorySummaries\"&&await this._persistTopic(`$1);")
-        $modified = $true
-        Write-Host "    [+] Upgraded pushUpdate persistence to safely target trajectorySummaries only." -ForegroundColor Green
+    $bak = "$MainJsPath.bak"
+    if (Test-Path $bak) {
+        Copy-Item $bak $MainJsPath -Force
+        Write-Host "    [+] Restored pristine factory engine from backup (100% stable)." -ForegroundColor Green
     } else {
-        $pattern1 = [regex]"(this\._updateEmitters\[(\w+)\]\.emit\((\w+)\);)(return\s*\}\s*finally)"
-        if ($pattern1.IsMatch($content)) {
-            $content = $pattern1.Replace($content, "`$1`$2===\"trajectorySummaries\"&&await this._persistTopic(`$2);`$4", 1)
-            $modified = $true
-            Write-Host "    [+] Patched pushUpdate for safe trajectorySummaries disk persistence." -ForegroundColor Green
+        $content = [System.IO.File]::ReadAllText($MainJsPath)
+        $cleaned = $content
+        $cleaned = [regex]::Replace($cleaned, 'delete\s+this\.lazilyInitializedTopicObservables\[\w+\];', '')
+        $cleaned = [regex]::Replace($cleaned, '(\w+)==="trajectorySummaries"&&await\s+this\._persistTopic\(\1\);', '')
+        $cleaned = [regex]::Replace($cleaned, 'await\s+this\._persistTopic\(\w+\);', '')
+        if ($cleaned -ne $content) {
+            [System.IO.File]::WriteAllText($MainJsPath, $cleaned)
+            Write-Host "    [+] Removed legacy engine patches. Core engine is now 100% factory pristine." -ForegroundColor Green
+        } else {
+            Write-Host "    [OK] Engine core is clean and unpatched (safe non-invasive architecture)." -ForegroundColor Green
         }
-    }
-
-    if ($modified) {
-        $bak = "$MainJsPath.bak"
-        if (-not (Test-Path $bak)) {
-            Copy-Item $MainJsPath $bak
-            Write-Host "    [+] Backup created: $bak" -ForegroundColor Cyan
-        }
-        [System.IO.File]::WriteAllText($MainJsPath, $content)
-        Write-Host "    [+] Core engine successfully updated." -ForegroundColor Green
     }
 } else {
     Write-Host "[!] Notice: Antigravity IDE main.js not located at default paths." -ForegroundColor Yellow
