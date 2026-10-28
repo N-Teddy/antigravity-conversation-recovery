@@ -57,17 +57,46 @@ flowchart TD
     E -.->|100ms Debounce| G[Persistent Storage Safe from Outages]
 ```
 
-1. **Immediate Persistence Patch:** Patches `pushUpdate()` in `main.js` to invoke `await this._persistTopic(n);` immediately on every update. SQLite debounces and writes to disk within 100ms.
-2. **Dynamic Window Reload Patch:** Clears stale memory caches on `initIPCSubscription` so reloading a window (`Ctrl+R`) instantly reflects disk updates.
+1. **Scoped Persistence Engine:** Safely patches `pushUpdate()` in `main.js` to persist `trajectorySummaries` directly without interfering with any other IDE subsystems or background communication.
+2. **Clean IPC Isolation:** Preserves in-memory state for ephemeral subsystems (such as Language Server discovery endpoints and authentication tokens), eliminating race conditions and infinite loading loops.
 3. **Workspace Isolation Engine:** Reconstructs the exact Protobuf schema (`Field 9: CortexWorkspaceMetadata`) so conversations are strictly bound to their respective projects.
 
 ---
 
-## 💻 CLI Commands
+## 💻 CLI & Interactive Console
 
 Once installed, you can use the `antigravity-recover` command anywhere:
 
-### 1. Check System Health & Status
+### 1. Launch Interactive Console
+Running without arguments opens an interactive terminal menu:
+```bash
+antigravity-recover
+```
+*Interactive Menu:*
+```text
+==================================================================
+          Antigravity IDE - Conversation Recovery Console
+==================================================================
+ Status: 101 conversation DBs on disk | 100 indexed in state.vscdb
+ Workspace Isolation: STRICT (conversations scoped to originating project)
+------------------------------------------------------------------
+  [1] Rebuild & Recover all conversations
+  [2] List & Search indexed conversations
+  [3] Check engine & background health status
+  [4] Dry-run preview scan (no changes to database)
+  [5] Help & Command Documentation
+  [0] Exit (or 'q')
+------------------------------------------------------------------
+Select an option [0-5]:
+```
+
+### 2. Built-in Help
+```bash
+antigravity-recover -help
+# or: antigravity-recover --help
+```
+
+### 3. Check System Health & Status
 ```bash
 antigravity-recover --status
 ```
@@ -80,30 +109,25 @@ State Database: Found
 Engine Core (/opt/antigravity-ide/resources/app/out/main.js):
   - Safe disk persistence patch:     ACTIVE [OK]
   - IPC topic isolation:             CLEAN [OK]
-Conversation Databases on disk: 94
-Indexed in state.vscdb:         94
+Conversation Databases on disk: 101
+Indexed in state.vscdb:         100
 Background Recovery Timer:       ACTIVE [OK]
 ```
 
-### 2. Search & Filter Conversations
+### 4. Search & Filter Conversations
 Filter by repository name, workspace, or title keyword:
 ```bash
-antigravity-recover --list --filter kora
-antigravity-recover --list --filter payment
+antigravity-recover --list --filter payunit
 antigravity-recover --list --filter urbany
+antigravity-recover --list -f payment
 ```
 
-### 3. List All Indexed Conversations
+### 5. Manual Non-Interactive Recovery
 ```bash
-antigravity-recover --list
+antigravity-recover --recover
 ```
 
-### 4. Manual Recovery / Re-index Scan
-```bash
-antigravity-recover
-```
-
-### 5. Safe Preview (Dry Run)
+### 6. Safe Preview (Dry Run)
 ```bash
 antigravity-recover --dry-run
 ```

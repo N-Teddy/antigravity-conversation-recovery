@@ -457,11 +457,109 @@ def check_status():
         timer_active = os.system("systemctl --user is-active --quiet antigravity-recover.timer 2>/dev/null") == 0
         print(f"Background Recovery Timer:       {'ACTIVE [OK]' if timer_active else 'INACTIVE / NOT INSTALLED'}")
 
+def print_help():
+    print("""
+==================================================================
+        Antigravity IDE - Conversation Recovery CLI
+==================================================================
+
+Usage:
+  antigravity-recover                     Start the interactive console (terminal mode)
+  antigravity-recover -help, --help, -h   Display this help message
+  antigravity-recover -r, --recover       Scan disk and rebuild state.vscdb index
+  antigravity-recover -s, --status        Check core engine patches and background timer
+  antigravity-recover -l, --list          List all indexed conversations in state.vscdb
+  antigravity-recover -l -f <keyword>     Search conversations by title, workspace, or ID
+  antigravity-recover -d, --dry-run       Preview recovery without modifying state.vscdb
+  antigravity-recover -i, --interactive   Explicitly launch the interactive console
+
+Description:
+  Antigravity Conversation Recovery protects and restores conversation
+  histories lost during sudden power outages or crashes. It indexes
+  SQLite conversation databases (~/.gemini/antigravity-ide/conversations)
+  into Antigravity IDE's state storage with strict workspace isolation.
+
+Examples:
+  antigravity-recover
+  antigravity-recover -help
+  antigravity-recover --status
+  antigravity-recover --list -f payunit
+  antigravity-recover --dry-run
+==================================================================
+""")
+
+def interactive_console():
+    while True:
+        dbs_count = len(glob.glob(os.path.join(CONVERSATIONS_DIR, "*.db")))
+        indexed_count = 0
+        if os.path.exists(STATE_DB_PATH):
+            try:
+                conn = sqlite3.connect(STATE_DB_PATH)
+                c = conn.cursor()
+                c.execute("SELECT value FROM ItemTable WHERE key='antigravityUnifiedStateSync.trajectorySummaries'")
+                row = c.fetchone()
+                conn.close()
+                if row:
+                    raw = base64.b64decode(row[0])
+                    indexed_count = sum(1 for fnum, _, _ in parse_fields(raw) if fnum == 1)
+            except Exception:
+                pass
+
+        print("\n" + "=" * 66)
+        print("          Antigravity IDE - Conversation Recovery Console")
+        print("=" * 66)
+        print(f" Status: {dbs_count} conversation DBs on disk | {indexed_count} indexed in state.vscdb")
+        print(" Workspace Isolation: STRICT (conversations scoped to originating project)")
+        print("-" * 66)
+        print("  [1] Rebuild & Recover all conversations")
+        print("  [2] List & Search indexed conversations")
+        print("  [3] Check engine & background health status")
+        print("  [4] Dry-run preview scan (no changes to database)")
+        print("  [5] Help & Command Documentation")
+        print("  [0] Exit (or 'q')")
+        print("-" * 66)
+
+        try:
+            choice = input("Select an option [0-5]: ").strip().lower()
+        except (KeyboardInterrupt, EOFError):
+            print("\nExiting.")
+            break
+
+        if choice in ["0", "q", "exit", "quit"]:
+            print("Goodbye.")
+            break
+        elif choice == "1":
+            print("\n[*] Starting conversation index rebuild...")
+            recover_all(dry_run=False)
+        elif choice == "2":
+            try:
+                kw = input("Enter search filter (keyword/workspace/title, or press Enter for all): ").strip()
+            except (KeyboardInterrupt, EOFError):
+                continue
+            list_existing_conversations(keyword_filter=kw if kw else None)
+        elif choice == "3":
+            print()
+            check_status()
+        elif choice == "4":
+            print("\n[*] Running preview scan...")
+            recover_all(dry_run=True)
+        elif choice in ["5", "h", "help"]:
+            print_help()
+        else:
+            print(f"[!] Invalid option '{choice}'. Please select 0, 1, 2, 3, 4, or 5.")
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
-    if "--status" in args or "-s" in args:
+
+    # Handle help flags: -help, --help, -h, help, /?
+    if any(a in ["-help", "--help", "-h", "help", "/?", "-?"] for a in args):
+        print_help()
+        sys.exit(0)
+
+    if "--status" in args or "-s" in args or "status" in args:
         check_status()
-    elif "--dry-run" in args:
+    elif "--dry-run" in args or "-d" in args or "dry-run" in args:
         recover_all(dry_run=True)
     elif "--list" in args or "-l" in args or "list" in args:
         kw = None
@@ -469,5 +567,13 @@ if __name__ == "__main__":
             if a in ["--filter", "-f"] and i + 1 < len(args):
                 kw = args[i+1]
         list_existing_conversations(keyword_filter=kw)
+    elif "--recover" in args or "-r" in args or "recover" in args:
+        recover_all(dry_run=False)
+    elif "--interactive" in args or "-i" in args or "interactive" in args:
+        interactive_console()
     else:
-        recover_all()
+        # If running in an interactive terminal, launch console; otherwise run recovery
+        if sys.stdin.isatty():
+            interactive_console()
+        else:
+            recover_all()
