@@ -70,34 +70,34 @@ if main_js_path and os.path.exists(main_js_path):
 
     modified = False
 
-    # 1. Patch pushUpdate immediate persistence
-    if "await this._persistTopic(" in text:
-        print("    [OK] pushUpdate immediate persistence is already active.")
+    # 1. Ensure initIPCSubscription is clean (remove harmful topic cache deletion if present)
+    ipc_pattern = re.compile(r"delete\s+this\.lazilyInitializedTopicObservables\[\w+\];")
+    if ipc_pattern.search(text):
+        text = ipc_pattern.sub("", text)
+        modified = True
+        print("    [+] Removed problematic IPC topic cache deletion (safeguards Language Server).")
+
+    # 2. Patch pushUpdate immediate persistence safely scoped to trajectorySummaries
+    if "===\"trajectorySummaries\"&&await this._persistTopic(" in text:
+        print("    [OK] pushUpdate scoped persistence is already active.")
+    elif "await this._persistTopic(" in text:
+        text = re.sub(
+            r"await this\._persistTopic\((\w+)\);",
+            r"\1===\"trajectorySummaries\"&&await this._persistTopic(\1);",
+            text
+        )
+        modified = True
+        print("    [+] Upgraded pushUpdate persistence to safely target trajectorySummaries only.")
     else:
-        pattern1 = re.compile(r'(this\._updateEmitters\[(\w+)\]\.emit\((\w+)\);)(return\s*\}\s*finally)')
+        pattern1 = re.compile(r"(this\._updateEmitters\[(\w+)\]\.emit\((\w+)\);)(return\s*\}\s*finally)")
         m1 = pattern1.search(text)
         if m1:
             topic_var = m1.group(2)
-            text = pattern1.sub(r'\1await this._persistTopic(' + topic_var + r');\4', text, count=1)
+            text = pattern1.sub(r"\1" + topic_var + r"===\"trajectorySummaries\"&&await this._persistTopic(" + topic_var + r");\4", text, count=1)
             modified = True
-            print(f"    [+] Patched pushUpdate for immediate disk flush.")
+            print(f"    [+] Patched pushUpdate for safe trajectorySummaries disk persistence.")
         else:
             print("    [!] Warning: pushUpdate pattern not found (different IDE version).")
-
-    # 2. Patch initIPCSubscription dynamic reload
-    if "delete this.lazilyInitializedTopicObservables[" in text:
-        print("    [OK] initIPCSubscription dynamic reload is already active.")
-    else:
-        pattern2 = re.compile(r'(async\s+initIPCSubscription\((\w+)\)\s*\{[^{]*?try\s*\{)(const\s+\w+\s*=\s*await\s+this\._getOrCreateTopic\(\2\);)')
-        m2 = pattern2.search(text)
-        if m2:
-            topic_var = m2.group(2)
-            text = pattern2.sub(r'\1delete this.lazilyInitializedTopicObservables[' + topic_var + r'];\3', text, count=1)
-            modified = True
-            print(f"    [+] Patched initIPCSubscription for window reload.")
-        else:
-            print("    [!] Warning: initIPCSubscription pattern not found.")
-
     if modified:
         bak = main_js_path + ".bak"
         if not os.path.exists(bak):

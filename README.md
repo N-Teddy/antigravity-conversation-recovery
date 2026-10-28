@@ -78,8 +78,8 @@ Detected OS: Linux
 User Home: /home/user
 State Database: Found
 Engine Core (/opt/antigravity-ide/resources/app/out/main.js):
-  - Immediate disk persistence patch: ACTIVE [OK]
-  - Dynamic window reload patch:     ACTIVE [OK]
+  - Safe disk persistence patch:     ACTIVE [OK]
+  - IPC topic isolation:             CLEAN [OK]
 Conversation Databases on disk: 94
 Indexed in state.vscdb:         94
 Background Recovery Timer:       ACTIVE [OK]

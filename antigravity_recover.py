@@ -426,11 +426,14 @@ def check_status():
     if main_js:
         with open(main_js, "r", encoding="utf-8") as f:
             content = f.read()
-        p1 = "await this._persistTopic(" in content
+        p1 = '==="trajectorySummaries"&&await this._persistTopic(' in content or "await this._persistTopic(" in content
         p2 = "delete this.lazilyInitializedTopicObservables[" in content
         print(f"Engine Core ({main_js}):")
-        print(f"  - Immediate disk persistence patch: {'ACTIVE [OK]' if p1 else 'MISSING [!] (re-run installer)'}")
-        print(f"  - Dynamic window reload patch:     {'ACTIVE [OK]' if p2 else 'MISSING [!] (re-run installer)'}")
+        print(f"  - Safe disk persistence patch:     {'ACTIVE [OK]' if p1 else 'MISSING [!] (re-run installer)'}")
+        if p2:
+            print("  - Problematic topic deletion:      DETECTED [!] (run installer to clean up)")
+        else:
+            print("  - IPC topic isolation:             CLEAN [OK]")
     else:
         print("Engine Core: main.js not located at standard paths.")
 

@@ -37,26 +37,28 @@ if ($MainJsPath) {
 
     $content = [System.IO.File]::ReadAllText($MainJsPath)
     $modified = $false
-
-    if ($content.Contains("await this._persistTopic(")) {
-        Write-Host "    [OK] pushUpdate immediate persistence already active." -ForegroundColor Green
-    } else {
-        $pattern1 = [regex]'(this\._updateEmitters\[(\w+)\]\.emit\((\w+)\);)(return\s*\}\s*finally)'
-        if ($pattern1.IsMatch($content)) {
-            $content = $pattern1.Replace($content, '$1await this._persistTopic($2);$4', 1)
-            $modified = $true
-            Write-Host "    [+] Patched pushUpdate for immediate disk flush." -ForegroundColor Green
-        }
+    # 1. Ensure initIPCSubscription is clean (remove harmful topic cache deletion if present)
+    $ipcPattern = [regex]"delete\s+this\.lazilyInitializedTopicObservables\[\w+\];"
+    if ($ipcPattern.IsMatch($content)) {
+        $content = $ipcPattern.Replace($content, "")
+        $modified = $true
+        Write-Host "    [+] Removed problematic IPC topic cache deletion (safeguards Language Server)." -ForegroundColor Green
     }
 
-    if ($content.Contains("delete this.lazilyInitializedTopicObservables[")) {
-        Write-Host "    [OK] initIPCSubscription dynamic reload already active." -ForegroundColor Green
+    # 2. Patch pushUpdate immediate persistence safely scoped to trajectorySummaries
+    if ($content.Contains("===\"trajectorySummaries\"&&await this._persistTopic(")) {
+        Write-Host "    [OK] pushUpdate scoped persistence already active." -ForegroundColor Green
+    } elseif ($content.Contains("await this._persistTopic(")) {
+        $scopedRegex = [regex]"await this\._persistTopic\((\w+)\);"
+        $content = $scopedRegex.Replace($content, "`$1===\"trajectorySummaries\"&&await this._persistTopic(`$1);")
+        $modified = $true
+        Write-Host "    [+] Upgraded pushUpdate persistence to safely target trajectorySummaries only." -ForegroundColor Green
     } else {
-        $pattern2 = [regex]'(async\s+initIPCSubscription\((\w+)\)\s*\{[^{]*?try\s*\{)(const\s+\w+\s*=\s*await\s+this\._getOrCreateTopic\(\2\);)'
-        if ($pattern2.IsMatch($content)) {
-            $content = $pattern2.Replace($content, '$1delete this.lazilyInitializedTopicObservables[$2];$3', 1)
+        $pattern1 = [regex]"(this\._updateEmitters\[(\w+)\]\.emit\((\w+)\);)(return\s*\}\s*finally)"
+        if ($pattern1.IsMatch($content)) {
+            $content = $pattern1.Replace($content, "`$1`$2===\"trajectorySummaries\"&&await this._persistTopic(`$2);`$4", 1)
             $modified = $true
-            Write-Host "    [+] Patched initIPCSubscription for window reload." -ForegroundColor Green
+            Write-Host "    [+] Patched pushUpdate for safe trajectorySummaries disk persistence." -ForegroundColor Green
         }
     }
 
